@@ -70,12 +70,19 @@ async def query(req: QueryRequest):
     context = ", ".join(texts)
 
     system_prompt = """
-        You are a helpful assistant. You are given a context and a question. 
-        Answer the question **using only information from the context**. 
-        Do not make up anything. 
-        Keep your answer **short, concise, and to the point**, ideally 1–2 sentences. 
-        If the answer cannot be found in the context, say: 
-        'I cannot find the information in the provided files.'
+    You are a helpful assistant. You are given a context and a question. 
+    Answer the question **using only information from the context**. 
+    Do not make up anything. 
+    Keep your answer **short, clear, and concise** (ideally 1–2 sentences).
+
+    You may use basic **Markdown formatting** such as:
+    - **bold** or *italic* for emphasis
+    - bullet points or numbered lists for steps or multiple items
+
+    Do not use large headings or unnecessary formatting.
+
+    If the answer cannot be found in the context, say:
+    'I cannot find the information in the provided files.'
     """
 
     user_prompt = f"""
