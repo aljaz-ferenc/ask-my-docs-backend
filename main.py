@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Literal
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
 from dotenv import load_dotenv
 import os
@@ -10,8 +10,13 @@ from vector_store import VectorStore
 import tempfile
 from openai import OpenAI
 
+class RecentMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
 class QueryRequest(BaseModel):
     query: str
+    recentMessages: list[RecentMessage] = []
 
 load_dotenv()
 
@@ -70,10 +75,13 @@ async def query(req: QueryRequest):
     context = ", ".join(texts)
 
     system_prompt = """
-    You are a helpful assistant. You are given a context and a question. 
-    Answer the question **using only information from the context**. 
-    Do not make up anything. 
-    Keep your answer **short, clear, and concise** (ideally 1–2 sentences).
+    You are a helpful assistant. You are given a context from uploaded documents, along with previous conversation history.
+
+    Use the provided context **as your main source of factual information**, but you may also use details from previous messages for continuity (e.g., follow-up questions or clarifications).
+
+    Do not invent facts not found in the context or prior conversation.
+
+    Keep your answers **short, clear, and concise** (1–2 sentences preferred).
 
     You may use basic **Markdown formatting** such as:
     - **bold** or *italic* for emphasis
@@ -81,8 +89,8 @@ async def query(req: QueryRequest):
 
     Do not use large headings or unnecessary formatting.
 
-    If the answer cannot be found in the context, say:
-    'I cannot find the information in the provided files.'
+    If the answer cannot be found in the context or previous discussion, say:
+    'I cannot find the information in the provided files or conversation.'
     """
 
     user_prompt = f"""
@@ -94,6 +102,7 @@ async def query(req: QueryRequest):
         model="gpt-4o-mini",
         messages=[
             {'role': 'system', 'content': system_prompt},
+            *req.recentMessages,
             {'role': 'user', 'content': user_prompt}
         ],
         max_tokens=150
