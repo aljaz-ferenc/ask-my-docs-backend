@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
+
+from file_storage import FileStorage
 from vector_store import VectorStore
 import tempfile
 from openai import OpenAI
@@ -17,6 +19,9 @@ class RecentMessage(BaseModel):
 class QueryRequest(BaseModel):
     query: str
     recentMessages: list[RecentMessage] = []
+
+class AddFilesRequest(BaseModel):
+    filesIds: list[str]
 
 load_dotenv()
 
@@ -32,6 +37,7 @@ app.add_middleware(
 )
 
 vector_store = VectorStore('ask-my-docs')
+file_storage = FileStorage()
 openai_client = OpenAI()
 
 @app.post('/upload')
@@ -110,3 +116,45 @@ async def query(req: QueryRequest):
     print(response)
 
     return {"results": results, "llm_response": response.choices[0].message.content}
+
+
+@app.post('/add-files')
+async def add_files(req: AddFilesRequest):
+
+    try:
+        docs = []
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for file_id in req.filesIds:
+                file_metadata = file_storage.get_file_metadata(file_id)
+                file_name = file_metadata['name']
+
+                file_bytes = file_storage.download_file(file_id)
+                temp_path = os.path.join(temp_dir, file_name)
+                with open(temp_path, 'wb') as f:
+                    f.write(file_bytes)
+
+                if file_name.endswith('.pdf'):
+                    loader = PyMuPDFLoader(temp_path)
+                    file_docs = loader.load()
+                elif file_name.endswith('.txt'):
+                    loader = TextLoader(temp_path)
+                    file_docs = loader.load()
+                else:
+                    print(f"Skipping unsupported file type: {file_name}")
+                    continue
+
+                for doc in file_docs:
+                    doc.metadata['file_id'] = file_id
+                    doc.metadata['file_name'] = file_name
+
+                docs.extend(file_docs)
+
+        chunks = vector_store.split_text(docs)
+        vector_store.add_docs(chunks)
+
+        return {"message": f"Processed {len(docs)} documents."}
+
+    except Exception as e:
+        print(f"Error adding documents: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
