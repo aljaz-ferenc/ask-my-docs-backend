@@ -7,6 +7,7 @@ import os
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
 from vector_store import VectorStore
+import tempfile
 
 class QueryRequest(BaseModel):
     query: str
@@ -29,28 +30,30 @@ vector_store = VectorStore('ask-my-docs')
 @app.post('/upload')
 async def upload(files: List[UploadFile] = File(...)):
     docs = []
-    for file in files:
-        if file.filename.endswith('.pdf'):
-            contents = await file.read()
-            with open(file.filename, 'wb') as f:
-                f.write(contents)
-
-            loader = PyMuPDFLoader(file.filename)
-            pdf_docs = loader.load()
-            docs.extend(pdf_docs)
-
-        elif file.filename.endswith('.txt'):
-            with open(file.filename, 'wb') as f:
-                f.write(await file.read())
-
-            loader = TextLoader(file.filename)
-            text_docs = loader.load()
-            docs.extend(text_docs)
 
     try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for file in files:
+                temp_path = os.path.join(temp_dir, file.filename)
+
+                contents = await file.read()
+                with open(temp_path, "wb") as f:
+                    f.write(contents)
+
+                if file.filename.endswith(".pdf"):
+                    loader = PyMuPDFLoader(temp_path)
+                    pdf_docs = loader.load()
+                    docs.extend(pdf_docs)
+                elif file.filename.endswith(".txt"):
+                    loader = TextLoader(temp_path)
+                    text_docs = loader.load()
+                    docs.extend(text_docs)
+
         chunks = vector_store.split_text(docs)
         vector_store.add_docs(chunks)
-        return {'message': f"Processed {len(docs)} documents."}
+
+        return {"message": f"Processed {len(docs)} documents."}
+
     except Exception as e:
         print(f"Upload error: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
