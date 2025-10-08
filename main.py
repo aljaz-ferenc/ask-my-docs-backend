@@ -5,6 +5,10 @@ from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
 from dotenv import load_dotenv
 import os
 
+from starlette.responses import JSONResponse
+
+from vector_store import VectorStore
+
 load_dotenv()
 
 origin = os.getenv('ORIGIN')
@@ -18,10 +22,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+vector_store = VectorStore('ask-my-docs')
+
 @app.post('/upload')
 async def upload(files: List[UploadFile] = File(...)):
     docs = []
-
     for file in files:
         if file.filename.endswith('.pdf'):
             contents = await file.read()
@@ -40,9 +45,12 @@ async def upload(files: List[UploadFile] = File(...)):
             text_docs = loader.load()
             docs.extend(text_docs)
 
-    print(f"Loaded {len(docs)} documents.")
-    return {'message': 'hello'}
-
-
+    try:
+        chunks = vector_store.split_text(docs)
+        vector_store.add_docs(chunks)
+        return {'message': f"Processed {len(docs)} documents."}
+    except Exception as e:
+        print(f"Upload error: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
