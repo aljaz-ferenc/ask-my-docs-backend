@@ -4,10 +4,12 @@ from typing import List
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
 from dotenv import load_dotenv
 import os
-
+from pydantic import BaseModel
 from starlette.responses import JSONResponse
-
 from vector_store import VectorStore
+
+class QueryRequest(BaseModel):
+    query: str
 
 load_dotenv()
 
@@ -54,3 +56,7 @@ async def upload(files: List[UploadFile] = File(...)):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
+@app.post("/query")
+async def query(req: QueryRequest):
+    results = vector_store.query([req.query])
+    return {"results": results}
