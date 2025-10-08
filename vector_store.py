@@ -17,8 +17,8 @@ class VectorStore:
             chunk_overlap=200
         )
 
-        if collection_name in [c.name for c in self.client.list_collections()]:
-            self.client.delete_collection(collection_name)
+        # if collection_name in [c.name for c in self.client.list_collections()]:
+        #     self.client.delete_collection(collection_name)
 
         try:
             self.collection = self.client.get_or_create_collection(
