@@ -129,7 +129,7 @@ async def query(req: QueryRequest):
        - If asked “who made you” or “what is this app,” mention that you were created for document-based Q&A, not as a general assistant.
     
     6. **Answer Style**
-       - Keep answers **short, clear, and friendly** (1–3 sentences).
+       - Keep answers **short, clear, and friendly**.
        - Use **Markdown** for light formatting:
          - **bold**, *italic*, lists, etc.
        - Avoid large headings or heavy formatting.
@@ -147,7 +147,6 @@ async def query(req: QueryRequest):
             *req.recentMessages,
             {'role': 'user', 'content': user_prompt}
         ],
-        max_tokens=150
     )
     print(response)
 
