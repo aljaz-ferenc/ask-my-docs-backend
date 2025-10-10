@@ -156,7 +156,7 @@ async def query(req: QueryRequest):
 
 @app.post('/files')
 async def add_files(req: AddFilesRequest):
-
+    print(req.filesIds)
     try:
         docs = []
 
@@ -189,7 +189,7 @@ async def add_files(req: AddFilesRequest):
         chunks = vector_store.split_text(docs)
         vector_store.add_docs(chunks)
 
-        return {"message": f"Processed {len(docs)} documents."}
+        return {"status": "success", "fileId": req.filesIds[0]}
 
     except Exception as e:
         print(f"Error adding documents: {e}")
@@ -210,4 +210,4 @@ async def remove_files(req: RemoveFilesRequest):
             print(f"Failed to delete file: {e}")
 
     print(f"Deleted {deleted_count} files.")
-    return {"deleted": deleted_count}
+    return {'status': 'success',  "fileId": req.filesIds[0]}
