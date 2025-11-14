@@ -13,3 +13,4 @@ wheels/
 # Database
 /data
 /data-sample
+/app/data

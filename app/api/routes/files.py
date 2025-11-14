@@ -1,47 +1,16 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, Depends
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
-from dotenv import load_dotenv
 import os
 from starlette.responses import JSONResponse
-from models.models import QueryRequest, AddFilesRequest, RemoveFilesRequest
-from file_storage import FileStorage
-from llms.chat_model import run_chat_model
-from vector_store import VectorStore
+from app.core.schemas import AddFilesRequest, RemoveFilesRequest
 import tempfile
+from app.api.dependencies import get_file_storage
+from app.api.dependencies import get_vector_store
 
-load_dotenv()
+files_router = APIRouter(prefix='/files', tags=['Files'])
 
-origin = os.getenv('ORIGIN')
-
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin],
-    allow_credentials=True,
-    allow_methods=["GET", 'POST'],
-    allow_headers=["*"],
-)
-
-vector_store = VectorStore('ask-my-docs')
-file_storage = FileStorage()
-
-@app.post("/query")
-async def query(req: QueryRequest):
-    results = vector_store.query([req.query])
-    print(f"Found {len(results)} results for query: {req.query}")
-
-    texts = [result["text"] for result in results]
-    context = ", ".join(texts)
-
-    response = run_chat_model(context=context, query=req.query, recent_messages=req.recentMessages)
-    print(response)
-
-    return {"results": results, "llm_response": response.choices[0].message.content}
-
-
-@app.post('/files')
-async def add_files(req: AddFilesRequest):
+@files_router.post('/')
+async def add_files(req: AddFilesRequest, file_storage = Depends(get_file_storage), vector_store = Depends(get_vector_store)):
     try:
         docs = []
 
@@ -81,8 +50,8 @@ async def add_files(req: AddFilesRequest):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
-@app.delete('/files')
-async def remove_files(req: RemoveFilesRequest):
+@files_router.delete('/')
+async def remove_files(req: RemoveFilesRequest, vector_store = Depends(get_vector_store)):
     deleted_count = 0
 
     for file_id in req.filesIds:
