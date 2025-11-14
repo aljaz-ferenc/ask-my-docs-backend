@@ -11,7 +11,11 @@ load_dotenv()
 class VectorStore:
     def __init__(self, collection_name):
         self.collection_name = collection_name
-        self.client = chromadb.PersistentClient(path=os.path.join(os.getcwd(), 'data'))
+
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+        os.makedirs(db_path, exist_ok=True)
+        print("DB_PATH: ", db_path)
+        self.client = chromadb.PersistentClient(path=db_path)
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200

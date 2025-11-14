@@ -1,5 +1,8 @@
 from openai import OpenAI
-from models.models import RecentMessage
+from app.core.schemas import RecentMessage
+from dotenv import load_dotenv
+
+load_dotenv()
 
 openai_client = OpenAI()
 
