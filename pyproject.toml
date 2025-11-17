@@ -9,9 +9,10 @@ dependencies = [
     "chromadb>=1.1.1",
     "dotenv>=0.9.9",
     "fastapi[standard]>=0.118.0",
-    "langchain>=0.3.27",
+    "langchain==1.0",
     "langchain-community>=0.3.31",
     "openai>=2.2.0",
     "pymupdf>=1.26.4",
+    "sse-starlette>=3.0.3",
     "uvicorn>=0.37.0",
 ]
