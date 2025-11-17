@@ -1,6 +1,6 @@
 from openai import OpenAI
-from app.core.schemas import RecentMessage
 from dotenv import load_dotenv
+from langchain.agents import create_agent
 
 load_dotenv()
 
@@ -56,19 +56,24 @@ system_prompt = """
        - Keep answers **short, clear, and friendly**.
     """
 
-def run_chat_model(context: str, query: str, recent_messages: list[RecentMessage]):
+def run_chat_model(context: str, query: str, recent_messages: list):
     user_prompt = f"""
-        Context: {context}.
-        \n\nQuestion: {query}
-        """
+    Context: {context}
 
-    response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {'role': 'system', 'content': system_prompt},
+    Question: {query}
+    """
+
+    agent = create_agent(model="gpt-4o-mini")
+
+    for token, metadata in agent.stream(
+        {
+            "messages": [
+                {"role": "system", "content": system_prompt},
                 *recent_messages,
-                {'role': 'user', 'content': user_prompt}
-            ],
-        )
-
-    return response
+                {"role": "user", "content": user_prompt}
+            ]
+        },
+        stream_mode="messages"
+    ):
+        if hasattr(token, 'content') and token.content:
+            yield token.content

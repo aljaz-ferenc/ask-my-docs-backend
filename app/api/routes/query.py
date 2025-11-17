@@ -1,21 +1,30 @@
-from fastapi import APIRouter, Depends
-from app.core.schemas import QueryRequest
+import asyncio
+from fastapi import APIRouter, Depends, Query
 from app.services.chat_model import run_chat_model
 from app.api.dependencies import get_vector_store
+from sse_starlette.sse import EventSourceResponse
 
 query_router = APIRouter(prefix='/query', tags=['Query'])
 
-@query_router.post("/")
-async def query(req: QueryRequest, vector_store = Depends(get_vector_store)):
-    results = vector_store.query([req.query])
-    print(f"Found {len(results)} results for query: {req.query}")
+@query_router.get("/")
+async def llm_stream(
+    query: str = Query(default=""),
+    recent_messages: str = Query(default="[]"),
+    vector_store = Depends(get_vector_store)
+):
+    results = vector_store.query([query])
+    print(f"Found {len(results)} results for query: {query}")
 
     texts = [result["text"] for result in results]
     context = ", ".join(texts)
 
-    response = run_chat_model(context=context, query=req.query, recent_messages=req.recentMessages)
-    print(response)
+    async def event_generator():
 
-    return {"results": results, "llm_response": response.choices[0].message.content}
+        for token in run_chat_model(context, query, recent_messages):
+            yield token
+            await asyncio.sleep(0.05)
+            
+        yield "[DONE]"
 
+    return EventSourceResponse(event_generator())
 
