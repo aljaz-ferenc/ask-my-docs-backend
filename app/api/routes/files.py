@@ -9,7 +9,7 @@ from app.api.dependencies import get_vector_store
 
 files_router = APIRouter(prefix='/files', tags=['Files'])
 
-@files_router.post('/')
+@files_router.post('')
 async def add_files(req: AddFilesRequest, file_storage = Depends(get_file_storage), vector_store = Depends(get_vector_store)):
     try:
         docs = []
@@ -50,7 +50,7 @@ async def add_files(req: AddFilesRequest, file_storage = Depends(get_file_storag
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
-@files_router.delete('/')
+@files_router.delete('')
 async def remove_files(req: RemoveFilesRequest, vector_store = Depends(get_vector_store)):
     deleted_count = 0
 
