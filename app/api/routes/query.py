@@ -6,7 +6,7 @@ from sse_starlette.sse import EventSourceResponse
 
 query_router = APIRouter(prefix='/query', tags=['Query'])
 
-@query_router.get("")
+@query_router.get("/")
 async def llm_stream(
     query: str = Query(default=""),
     recent_messages: str = Query(default="[]"),
