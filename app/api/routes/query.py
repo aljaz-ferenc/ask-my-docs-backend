@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from app.services.chat_model import run_chat_model
 from app.api.dependencies import get_vector_store
 from sse_starlette.sse import EventSourceResponse
+import json
 
 query_router = APIRouter(prefix='/query', tags=['Query'])
 
@@ -14,17 +15,19 @@ async def llm_stream(
 ):
     results = vector_store.query([query])
     print(f"Found {len(results)} results for query: {query}")
+    metadata = [result['metadata'] for result in results]
 
     texts = [result["text"] for result in results]
     context = ", ".join(texts)
 
     async def event_generator():
+        yield {'event': 'metadata', 'data': json.dumps(metadata)}
 
         for token in run_chat_model(context, query, recent_messages):
-            yield token
+            yield {'event': 'token', 'data': token}
             await asyncio.sleep(0.05)
             
-        yield "[DONE]"
+        yield {"event": "done", "data": "done"}
 
     return EventSourceResponse(event_generator())
 
